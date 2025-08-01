@@ -44,6 +44,7 @@ contains
       unpack_matrix
     use oqp_linalg
     use printing, only: print_module_info
+    use iso_c_binding, only: c_f_pointer, c_int
 
     implicit none
 
@@ -71,11 +72,13 @@ contains
     real(kind=dp), pointer :: fmrst2(:,:,:,:)
     real(kind=dp), allocatable, target :: fmrq1(:,:,:)
     real(kind=dp), allocatable :: dip(:,:,:), bvec_mo_tmp(:), eex(:)
+    integer(c_int) , pointer :: ixcore_ptr(:)
 
     integer :: nocca, nvira, noccb, nvirb
     integer :: nbf, nbf2, xvec_dim
     integer :: mxvec, ist, jst, iend, nvec, novec
     integer :: iter, nv, iv, ivec
+    integer :: diag_index
     integer :: mxiter
     logical :: tamm_dancoff
     integer :: imax
@@ -114,6 +117,10 @@ contains
   ! Load basis set
     basis => infos%basis
     basis%atoms => infos%atoms
+
+  ! Get Fortran pointer ixcore_ptr from C pointer
+    if (.not. (infos%tddft%ixcore_len == 0)) &
+    call c_f_pointer(infos%tddft%ixcore, ixcore_ptr, [infos%tddft%ixcore_len])
 
    ! Input parameters
     dft = infos%control%hamilton == 20 ! dft or hf
@@ -273,6 +280,8 @@ contains
       write(*,'(5x,"Number of virtual beta orbitals:  ",1x,I0)') nvirb
       write(*,'(5x,"Maximum vectors:                  ",1x,I0)') mxvec
       write(*,'(5x,"Initial vectors:                  ",1x,I0)') nvec
+      if (.not. (infos%tddft%ixcore_len == 0)) &
+        write(*,'(5x,"Ixcore (MO index):                ",1x,I0)') ixcore_ptr
       write(*, '(/7x,"Fitting parameters for MRSF-TDDFT")')
       if (.not.infos%dft%cam_flag) then
         write(*, '(10x,"Exact HF exchange:")')
@@ -307,6 +316,17 @@ contains
     if (roref) then
   !   Alapha
       call orthogonal_transform_sym(nbf, nbf, fock_a, mo_a, nbf, scr)
+
+      ! shift Fock in MO basis here except MOs listed in ixcores
+      if (.not. (infos%tddft%ixcore_len == 0)) then
+        Do iter = 1, noccb
+            if (.not. any(ixcore_ptr(1:infos%tddft%ixcore_len) == iter)) then
+                diag_index = (iter + 1) * iter / 2
+                scr(diag_index) = -1.0d6
+            end if
+        End Do
+      end if
+
       call unpack_matrix(scr,fa)
 
   !   Beta

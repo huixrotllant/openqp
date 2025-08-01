@@ -84,9 +84,11 @@ contains
       OQP_DM_A, OQP_DM_B, OQP_td_abxc, OQP_td_p /)
 
     mol_mult = infos%mol_prop%mult
-    if (mol_mult/=3) call show_message(&
-            'SF-TDDFT are available for ROHF/UHF ref.&
-            &with ONLY triplet multiplicity(mult=3)', with_abort)
+!    if (.not. (mol_mult == 3 .or. mol_mult == 4)) then
+!      call show_message( &
+!        'SF-TDDFT only supports mult=3 (triplet) or mult=4 (quartet) references', &
+!        with_abort)
+!    end if 
 
     scf_type = infos%control%scftype
     if (scf_type==3) roref = .true.
@@ -185,7 +187,7 @@ contains
     use constants, only: tol_int
     use grd1, only: eijden, print_gradient, &
             grad_nn, grad_ee_overlap, &
-            grad_ee_kinetic, grad_en_hellman_feynman, grad_en_pulay
+            grad_ee_kinetic, grad_en_hellman_feynman, grad_en_pulay, grad_1e_ecp
 
     use mathlib, only: symmetrize_matrix
 
@@ -231,7 +233,7 @@ contains
 !     Zero out gradient
       grad = 0.0d0
 !     Nuclear repulsion force
-      call grad_nn(infos%atoms)
+      call grad_nn(infos%atoms, infos%basis%ecp_zn_num)
 
 !     Obtain Lagrangian matrix (`dens`)
       call eijden(dens, nbf, infos)
@@ -256,6 +258,9 @@ contains
 
 !     Pulay force
       call grad_en_pulay(basis, xyz, zn, dens, grad, logtol=tol)
+
+!     Effective core potential gradient
+      call grad_1e_ecp(infos, basis, xyz, dens, grad, logtol=tol)
 
     end associate
 

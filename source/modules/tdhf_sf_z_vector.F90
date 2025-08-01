@@ -101,9 +101,11 @@ contains
       OQP_td_energies /)
 
     mol_mult = infos%mol_prop%mult
-    if (mol_mult/=3) call show_message(&
-            'SF-TDDFT are available for ROHF/UHF ref.&
-            &with ONLY triplet multiplicity(mult=3)', with_abort)
+ !   if (.not. (mol_mult == 3 .or. mol_mult == 4)) then
+ !     call show_message( &
+ !       'SF-TDDFT only supports mult=3 (triplet) or mult=4 (quartet) references', &
+ !       with_abort)
+ !   end if 
 
     scf_type = infos%control%scftype
     if (scf_type==3) roref = .true.
@@ -274,6 +276,8 @@ contains
     call mntoia(ab1(:,:,2), ab1_mo_b, mo_b, mo_b, noccb, noccb)
 
   ! Initialize ERI calculations
+    call int2_data%clean()
+    deallocate(int2_data)
     int2_data = int2_td_data_t(d2=bvec, &
             int_apb=.false., &
             int_amb=.false., &
@@ -338,6 +342,8 @@ contains
       call orthogonal_transform('t', nbf, mo_b, wrk2, pa(:,:,2), wrk3)
 
 !     (A+B)*PK
+      call int2_data%clean()
+      deallocate(int2_data)
       int2_data = int2_tdgrd_data_t(d2=pa, &
               int_apb=.true., &
               int_amb=.false., &
@@ -416,6 +422,8 @@ contains
  !  Update density for beta
     call orthogonal_transform('t', nbf, mo_b, wrk2, pa(:,:,2), wrk3)
 
+    call int2_data%clean()
+    deallocate(int2_data)
     int2_data = int2_tdgrd_data_t(d2=pa, &
             int_apb=.true., int_amb=.false., tamm_dancoff=.false., &
             scale_exchange=scale_exch)

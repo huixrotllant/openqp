@@ -8,8 +8,8 @@ system=
    1  -0.533194329   0.533194329  -0.614469223
    1   0.533194329  -0.533194329  -0.614469223
 charge=0
-runtype=energy
-basis=6-31g(d)
+runtype=grad
+basis=6-31g*
 method=hf
 
 [guess]

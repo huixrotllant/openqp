@@ -27,6 +27,8 @@ contains
     use oqp_tagarray_driver
     use iso_c_binding, only: c_char
     use parallel, only: par_env_t
+    use basis_api, only: map_shell2basis_set, print_basis
+
     implicit none
     type(information), intent(inout) :: infos
     type(par_env_t) :: pe
@@ -47,11 +49,11 @@ contains
     do i = 1, ubound(basis_filename,1)
        basis_file(i:i) = basis_filename(i)
     end do
-
-  ! Files open
-  ! 3. LOG: Write: Main output file
-  ! 5. BAS: read: Basis set library (internally)
-
+!
+!  ! Files open
+!  ! 3. LOG: Write: Main output file
+!  ! 5. BAS: read: Basis set library (internally)
+!
     open (newunit=iw, file=infos%log_filename, position="append")
    !
     write(iw,'(/,20x,"++++++++++++++++++++++++++++++++++++++++")')
@@ -59,25 +61,49 @@ contains
     write(iw,'(  22X,"Setting up basis set information")')
     write(iw,'(20x,"++++++++++++++++++++++++++++++++++++++++")')
     call pe%init(infos%mpiinfo%comm, infos%mpiinfo%usempi)
-    if (pe%rank == 0) then
-      call infos%basis%from_file(basis_file, infos%atoms, err)
-      infos%control%basis_set_issue = err
+    call map_shell2basis_set(infos)
+!    if (pe%rank == 0) then
+!      call infos%basis%from_file(basis_file, infos%atoms, err)
+!      infos%control%basis_set_issue = err
+!    endif
+
+!    call infos%basis%basis_broadcast(infos%mpiinfo%comm, infos%mpiinfo%usempi)
+
+    if (sum(infos%basis%ecp_zn_num)>0) then
+      call pe%bcast(infos%mol_prop%nelec, 1)
+      call pe%bcast(infos%mol_prop%nelec_A, 1)
+      call pe%bcast(infos%mol_prop%nelec_B, 1)
+      call pe%bcast(infos%mol_prop%nocc, 1)
+    end if
+
+! Checking error of basis set reading..
+!    call pe%bcast(infos%control%basis_set_issue, 1)
+
+    if (infos%control%active_basis == 0) then
+      write(iw,'(/5X,"Basis Sets options"/&
+                    &5X,18("-")/&
+                    &5X,"Basis Sets: ",A/&
+                    &5X,"Number of Shells  =",I8,5X,"Number of Primitives  =",I8/&
+                    &5X,"Number of Basis Set functions  =",I8/&
+                    &5X,"Maximum Angluar Momentum =",I8/)') &
+                      trim(basis_file), &
+                      infos%basis%nshell, infos%basis%nprim, &
+                      infos%basis%nbf, infos%basis%mxam
+    else
+      write(iw,'(/5X,"Alternative Basis Set Options"/&
+                    &5X,18("-")/&
+                    &5X,"Basis Sets: ",A/&
+                    &5X,"Number of Shells  =",I8,5X,"Number of Primitives  =",I8/&
+                    &5X,"Number of Basis Set functions  =",I8/&
+                    &5X,"Maximum Angluar Momentum =",I8/)') &
+                      trim(basis_file), &
+                      infos%alt_basis%nshell, infos%alt_basis%nprim, &
+                      infos%alt_basis%nbf, infos%alt_basis%mxam
     endif
-  ! Checking error of basis set reading..
-    call infos%basis%basis_broadcast(infos%mpiinfo%comm, infos%mpiinfo%usempi)
-    call pe%bcast(infos%control%basis_set_issue, 1)
-
-    write(iw,'(/5X,"Basis Sets options"/&
-                  &5X,18("-")/&
-                  &5X,"Basis Set File: ",A/&
-                  &5X,"Number of Shells  =",I8,5X,"Number of Primitives  =",I8/&
-                  &5X,"Number of Basis Set functions  =",I8/&
-                  &5X,"Maximum Angluar Momentum =",I8/)') &
-                    trim(basis_file), &
-                    infos%basis%nshell, infos%basis%nprim, &
-                    infos%basis%nbf, infos%basis%mxam
-
     close (iw)
+
+    call print_basis(infos)
+
 
   end subroutine oqp_apply_basis
 

@@ -39,7 +39,7 @@ class OQPTester:
                  output_dir: str = None,
                  total_cpus: int = None,
                  omp_threads: int = None,
-                 mpi_manager = None):
+                 mpi_manager=None):
         """
         Initialize the OQPTester.
 
@@ -81,7 +81,7 @@ class OQPTester:
 
     def log(self, message: str):
         """Simple logging function to stdout."""
-        if self.mpi_manager.rank == 0 :
+        if self.mpi_manager.rank == 0:
             print(f"[OQPTester] {message}")
 
     def get_git_commit_info(self):
@@ -149,7 +149,7 @@ class OQPTester:
         except Exception as err:
             self.log(f"Error in test {project_name}: {str(err)}")
             result["status"] = "ERROR"
-            result["message"] = f"PyOQP error: {type(err).__name__}"
+            result["message"] = f"PyOQP error: {type(err).__name__} - {str(err)}"
 
         result["execution_time"] = time.perf_counter() - start_time
         return result
@@ -166,7 +166,7 @@ class OQPTester:
         self.start_time = time.perf_counter()
         if self.mpi_manager.rank == 0:
             if not os.path.exists(self.output_dir):
-                 os.makedirs(self.output_dir)
+                os.makedirs(self.output_dir)
 
         input_files = self._get_input_files(test_path)
         if not input_files:
@@ -193,6 +193,8 @@ class OQPTester:
             test_dir = self.base_test_dir
         elif test_path == 'other':
             test_dir = os.path.join(self.base_test_dir, 'other')
+        elif test_path == 'SCF':
+            test_dir = os.path.join(self.base_test_dir, 'SCF')
         elif os.path.isdir(test_path):
             test_dir = test_path
         elif os.path.isfile(test_path) and test_path.endswith('.inp'):
@@ -290,5 +292,5 @@ Total execution time: {self.format_time(total_time)}
             report = self.generate_report()
             self.log("OpenQP tests completed")
             return report
-        else :
+        else:
             return 1

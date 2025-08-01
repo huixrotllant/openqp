@@ -99,6 +99,7 @@ module types
     integer(c_int64_t) :: scftype  = 1       !< Refence wavefuction, 1= RHF 2= UHF 3= ROHF
     character(c_char)  :: runtype(20)  = ''  !<  Run type: energy, grad, etc.
     integer(c_int64_t) :: guess    = 1       !< used guess
+    integer(c_int64_t) :: active_basis = 0    !< Choose data basis: 0 -> info%basis, 1 -> info%alt_basis
     integer(c_int64_t) :: maxit    = 3       !< The maximum number of iterations
     integer(c_int64_t) :: maxit_dav = 50     !< The maximum number of iterations in Davidson eigensolver
     integer(c_int64_t) :: maxit_zv = 50      !< The maximum number of CG iterations in Z-vector subroutines
@@ -111,16 +112,27 @@ module types
     real(c_double) :: vdiis_vshift_switch = 0.003_dp !< The threshold for setting vshift = 0
     real(c_double) :: vshift_cdiis_switch = 0.3_dp   !< The threshold for selecting cdiis for vshift
     real(c_double) :: vshift = 0.0_dp                !< Virtual orbital shift for ROHF
-    logical(c_bool) :: mom = .false.                 ! Maximum Overlap Method for SCF Convergency
-    real(c_double) :: mom_switch = 0.003_dp          ! Turn on criteria of DIIS error
-    real(c_double) :: conv         = 1e-6_dp         !< Convergency criteria of SCF
+    logical(c_bool) :: mom = .false.                 !< Maximum Overlap Method for SCF Convergency
+    logical(c_bool) :: pfon = .false.                !< Pseudo-Fractional Occupation Number Method (pFON) for scf
+    real(c_double) :: mom_switch = 0.003_dp          !< Turn on criteria of DIIS error
+    real(c_double) :: pfon_start_temp = 2000.0_dp    !< Starting tempreature for pFON
+    real(c_double) :: pfon_cooling_rate = 50.0_dp    !< Tempreature cooling rate for pFON
+    real(c_double) :: pfon_nsmear = 5.0_dp           !< Num. of smearing orbitals for pFON if = 0, all 
+    real(c_double) :: conv = 1e-6_dp                 !< Convergency criteria of SCF
     integer(c_int64_t) :: scf_incremental = 1        !< Enable/disable incremental Fock build
     real(c_double) :: int2e_cutoff = 5e-11_dp        !< 2e-integrals cutoff
     integer(c_int64_t) :: esp = 0                    !< (R)ESP charges, 0 - skip, 1 - ESP, 2 - RESP
     integer(c_int64_t) :: resp_target = 0            !< RESP charges target: 0 - zero, 1 - Mulliken
     real(c_double) :: resp_constr = 0.01             !< RESP charges constraint
     logical(c_bool) :: basis_set_issue = .false.     !< Basis set issue flag
-    real(c_double) :: conf_print_threshold = 5.0d-02             !< The threshold for configuration printout
+
+    real(c_double) :: conf_print_threshold = 5.0d-02 !< The threshold for configuration printout
+    logical(c_bool) :: rstctmo = .false.               !< Restrict new MO similar to previous MO. This is similar to MOM method
+    ! SOSCF parameters
+    integer(c_int64_t) :: soscf_type = 0       !< SOSCF type: 0=off, 1=SOSCF only, 2=SOSCF+DIIS
+    real(c_double) :: soscf_lvl_shift = 0.0_dp !< Level shifting parameter for SOSCF
+    integer(c_int64_t) :: soscf_reset_mod = 0  !< Reset the orbital Hessian. If it is zero, we don't reset by default.
+    integer(c_int64_t) :: verbose = 1          !< Controls output verbosity: 0 for minimal, 1+ for detailed.
   end type control_parameters
 
   type, public, bind(c) :: tddft_parameters
@@ -143,6 +155,8 @@ module types
     real(c_double) :: spc_coco = 0.0_dp    !< Spin-pair coupling parameter MRSF (C=closed, O=open, V=virtual MOs)
     real(c_double) :: spc_ovov = 0.0_dp    !< Spin-pair coupling parameter MRSF (C=closed, O=open, V=virtual MOs)
     real(c_double) :: spc_coov = 0.0_dp    !< Spin-pair coupling parameter MRSF (C=closed, O=open, V=virtual MOs)
+    type(c_ptr) :: ixcore                  !< orbital index responsible for excitation (ixcore=1 means that it computes 
+    integer(c_int64_t) :: ixcore_len = 0   !< length of ixcore
   end type tddft_parameters
 
   type, public, bind(c) :: mpi_communicator
@@ -151,6 +165,20 @@ module types
     logical(c_bool) :: usempi = .false.
   end type mpi_communicator
 
+  type, public, bind(c) :: electron_shell
+    integer(c_int) :: id = 0
+    integer(c_int) :: element_id = -1
+!    integer(c_int) :: num_expo = 0
+    integer(c_int) :: ang_mom = 0
+    integer(c_int) :: ecp_nam = 0
+    type(c_ptr) :: num_expo
+    type(c_ptr) :: expo
+    type(c_ptr) :: coef
+    type(c_ptr) :: ecp_am
+    type(c_ptr) :: ecp_rex
+    type(c_ptr) :: ecp_coord
+    type(c_ptr) :: ecp_zn
+  end type electron_shell
 
   type, public :: information
     type(molecule) :: mol_prop
@@ -162,8 +190,10 @@ module types
     type(tddft_parameters) :: tddft
     type(container_t) :: dat
     type(basis_set) :: basis
+    type(basis_set) :: alt_basis
     character(len=:), allocatable :: log_filename
     type(mpi_communicator) :: mpiinfo
+    type(electron_shell) :: elshell
   contains
     generic :: set_atoms => set_atoms_arr, set_atoms_atm
     procedure, pass :: set_atoms_arr => info_set_atoms_arr
@@ -205,3 +235,4 @@ contains
   end function
 
 end module types
+

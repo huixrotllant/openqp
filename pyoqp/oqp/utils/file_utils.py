@@ -70,6 +70,7 @@ def dump_log(mol, title=None, section=None, info=None, must_print=False):
     scf_type = mol.data._data.control.scftype
     scf_maxit = mol.data._data.control.maxit
     scf_mult = mol.data._data.mol_prop.mult
+    scf_forced_attempt = mol.config['scf']['forced_attempt']
     scf_conv = mol.config['scf']['conv']
     scf_incre = mol.config['scf']['incremental']
     diis_type = mol.config['scf']['diis_type']
@@ -114,8 +115,9 @@ def dump_log(mol, title=None, section=None, info=None, must_print=False):
    PyOQP guess file:                   %s
    PyOQP guess alpha:                  %s
    PyOQP guess beta:                   %s
+   PyOQP guess swapmo:                 %s
 
-""" % (info['guess_type'], info['guess_file'], info['guess_alpha'], info['guess_beta'])
+""" % (info['guess_type'], info['guess_file'], info['guess_alpha'], info['guess_beta'], info['guess_swapmo'])
 
     if section == 'basis_overlap':
         coord = mol.config['input']['system2']
@@ -163,16 +165,17 @@ def dump_log(mol, title=None, section=None, info=None, must_print=False):
         loginfo += """
    PyOQP natom:                        %s
    PyOQP charge:                       %s
-   PyOQP basis:                        %s
     
-""" % (natom, charge, basis)
+""" % (natom, charge)
 
     if section in ['scf']:
         loginfo += """
    PyOQP method:                       %s
    PyOQP hf/functional:                %s
+   PyOQP basis:                        %s
    PyOQP scf type:                     %s
    PyOQP scf maxit:                    %s
+   PyOQP scf forced attempt:           %s
    PyOQP scf multiplicity:             %s
    PyOQP scf convergence:              %s
    PyOQP scf incremental:              %s
@@ -183,7 +186,8 @@ def dump_log(mol, title=None, section=None, info=None, must_print=False):
    PyOQP vshift:                       %s
    
 """ % (
-            method, functional, scftypes[scf_type], scf_maxit, scf_mult, scf_conv, scf_incre, diis_type,
+            method, functional, basis, scftypes[scf_type], scf_maxit, scf_forced_attempt, scf_mult, scf_conv, scf_incre,
+            diis_type,
             vdiis_cdiis_switch,
             vdiis_vshift_switch,
             vshift_cdiis_switch,

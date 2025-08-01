@@ -29,8 +29,8 @@ endif()
 set(NLOPT_PREFIX ${CMAKE_BINARY_DIR}/external/nlopt CACHE INTERNAL "NLOPT_PREFIX")
 ExternalProject_Add(nlopt
         PREFIX ${NLOPT_PREFIX}
-        URL https://github.com/stevengj/nlopt/archive/v2.7.1.tar.gz
-        URL_HASH SHA256=db88232fa5cef0ff6e39943fc63ab6074208831dc0031cf1545f6ecd31ae2a1a
+        URL https://github.com/stevengj/nlopt/archive/v2.9.1.tar.gz
+        URL_HASH SHA256=1e6c33f8cbdc4138d525f3326c231f14ed50d99345561e85285638c49b64ee93
         BINARY_DIR ${NLOPT_PREFIX}/build-${CMAKE_Fortran_COMPILER_ID}
         STAMP_DIR  ${NLOPT_PREFIX}/stamp-${CMAKE_Fortran_COMPILER_ID}
         BUILD_BYPRODUCTS ${NLOPT_PREFIX}/build-${CMAKE_Fortran_COMPILER_ID}/libnlopt.a
@@ -52,8 +52,8 @@ ExternalProject_Add(nlopt
 
 ExternalProject_Add(libxc
         PREFIX ${CMAKE_SOURCE_DIR}/external/libxc
-        URL https://gitlab.com/libxc/libxc/-/archive/6.2.2/libxc-6.2.2.tar.gz
-        URL_HASH SHA256=d1b65ef74615a1e539d87a0e6662f04baf3a2316706b4e2e686da3193b26b20f
+	URL https://gitlab.com/libxc/libxc/-/archive/7.0.0/libxc-7.0.0.tar.gz
+        URL_HASH SHA256=8d4e343041c9cd869833822f57744872076ae709a613c118d70605539fb13a77
         BINARY_DIR ${CMAKE_BINARY_DIR}/external/libxc/src/libxc-build-${CMAKE_Fortran_COMPILER_ID}
         STAMP_DIR  ${CMAKE_BINARY_DIR}/external/libxc/src/libxc-stamp-${CMAKE_Fortran_COMPILER_ID}
         UPDATE_COMMAND ""
@@ -66,6 +66,7 @@ ExternalProject_Add(libxc
                    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                    -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+                   -DCMAKE_POLICY_VERSION_MINIMUM=3.25
                    -DCMAKE_GENERATOR:INTERNAL=${CMAKE_GENERATOR}
         )
 
@@ -86,6 +87,22 @@ ExternalProject_Add(libtagarray
                    -DCMAKE_GENERATOR:INTERNAL=${CMAKE_GENERATOR}
         )
 
+ExternalProject_Add(libecpint
+        PREFIX ${CMAKE_SOURCE_DIR}/external/libecpint
+        URL https://github.com/robashaw/libecpint/archive/refs/tags/v1.0.7.tar.gz
+        URL_HASH SHA256=e9c60fddb2614f113ab59ec620799d961db73979845e6e637c4a6fb72aee51cc
+        BINARY_DIR ${CMAKE_BINARY_DIR}/external/libecpint/src/libecpint-build-${CMAKE_Fortran_COMPILER_ID}
+        STAMP_DIR  ${CMAKE_BINARY_DIR}/external/libecpint/src/libecpint-stamp-${CMAKE_Fortran_COMPILER_ID}
+	INSTALL_DIR ${CMAKE_BINARY_DIR}/external/libecpint/install
+        UPDATE_COMMAND ""
+        CMAKE_ARGS -DLIBECPINT_BUILD_DOCS=OFF
+                   -DLIBECPINT_BUILD_TESTS=OFF
+		   -DLIBECPINT_USE_PUGIXML=OFF
+                   -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                   -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+		   -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install
+        )
 if(ENABLE_Formatter)
   find_package(Python3 REQUIRED)
   ExternalProject_Add(fprettify
